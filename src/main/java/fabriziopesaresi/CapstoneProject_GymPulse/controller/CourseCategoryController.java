@@ -33,16 +33,11 @@ public class CourseCategoryController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CourseCategoryResponse> create(@RequestBody CourseCategory category) {
-        try {
-            CourseCategory saved = categoryRepository.save(category);
-            CourseCategoryResponse r = new CourseCategoryResponse();
-            r.setId(saved.getId());
-            r.setName(saved.getName());
-            r.setIcon(saved.getIcon());
-            return ResponseEntity.ok(r);
-        } catch (Exception e) {
-            System.out.println("=== ERRORE CATEGORIA: " + e.getMessage());
-            throw e;
-        }
+        CourseCategory saved = categoryRepository.save(category);
+        CourseCategoryResponse r = new CourseCategoryResponse();
+        r.setId(saved.getId());
+        r.setName(saved.getName());
+        r.setIcon(saved.getIcon());
+        return ResponseEntity.ok(r);
     }
 }
