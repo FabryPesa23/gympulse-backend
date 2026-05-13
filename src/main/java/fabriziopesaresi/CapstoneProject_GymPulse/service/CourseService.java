@@ -3,13 +3,17 @@ package fabriziopesaresi.CapstoneProject_GymPulse.service;
 import fabriziopesaresi.CapstoneProject_GymPulse.dto.request.CourseRequest;
 import fabriziopesaresi.CapstoneProject_GymPulse.dto.response.CourseCategoryResponse;
 import fabriziopesaresi.CapstoneProject_GymPulse.dto.response.CourseResponse;
+import fabriziopesaresi.CapstoneProject_GymPulse.entity.Booking;
 import fabriziopesaresi.CapstoneProject_GymPulse.entity.Course;
 import fabriziopesaresi.CapstoneProject_GymPulse.entity.CourseCategory;
+import fabriziopesaresi.CapstoneProject_GymPulse.repository.BookingRepository;
 import fabriziopesaresi.CapstoneProject_GymPulse.repository.CourseCategoryRepository;
 import fabriziopesaresi.CapstoneProject_GymPulse.repository.CourseRepository;
+import fabriziopesaresi.CapstoneProject_GymPulse.repository.TimeSlotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -18,6 +22,8 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final CourseCategoryRepository categoryRepository;
+    private final BookingRepository bookingRepository;
+    private final TimeSlotRepository timeSlotRepository;
 
     public List<CourseResponse> getAllCourses() {
         return courseRepository.findAll()
@@ -99,6 +105,24 @@ public class CourseService {
             cat.setName(course.getCategory().getName());
             cat.setIcon(course.getCategory().getIcon());
             response.setCategory(cat);
+        }
+
+        // Calcola available slots per la data di oggi
+        LocalDate today = LocalDate.now();
+        var slots = timeSlotRepository.findByCourseId(course.getId());
+
+        if (slots.isEmpty()) {
+            response.setAvailableSlots(course.getMaxCapacity());
+        } else {
+            int minAvailable = slots.stream()
+                    .mapToInt(slot -> {
+                        int booked = bookingRepository.countByTimeSlotIdAndDateAndStatus(
+                                slot.getId(), today, Booking.Status.CONFIRMED);
+                        return course.getMaxCapacity() - booked;
+                    })
+                    .min()
+                    .orElse(course.getMaxCapacity());
+            response.setAvailableSlots(minAvailable);
         }
 
         return response;
