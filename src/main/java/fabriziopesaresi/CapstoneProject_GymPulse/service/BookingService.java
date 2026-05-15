@@ -19,6 +19,7 @@ public class BookingService {
     private final TimeSlotRepository timeSlotRepository;
     private final UserRepository userRepository;
     private final WaitListRepository waitListRepository;
+    private final MailgunService mailgunService;
 
     public List<BookingResponse> getMyBookings() {
         User user = getCurrentUser();
@@ -59,7 +60,18 @@ public class BookingService {
         booking.setDate(date);
         booking.setStatus(Booking.Status.CONFIRMED);
 
-        return toResponse(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+
+        // Invio email di conferma
+        mailgunService.sendBookingConfirmation(
+                user.getEmail(),
+                user.getFirstName(),
+                timeSlot.getCourse().getName(),
+                date.toString(),
+                timeSlot.getStartTime().toString()
+        );
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -88,6 +100,15 @@ public class BookingService {
             newBooking.setStatus(Booking.Status.CONFIRMED);
             bookingRepository.save(newBooking);
             waitListRepository.delete(first);
+
+            // Invio email notifica waitlist
+            mailgunService.sendWaitlistNotification(
+                    first.getUser().getEmail(),
+                    first.getUser().getFirstName(),
+                    booking.getTimeSlot().getCourse().getName(),
+                    booking.getDate().toString(),
+                    booking.getTimeSlot().getStartTime().toString()
+            );
 
             waitList.stream().skip(1).forEach(w -> {
                 w.setPosition(w.getPosition() - 1);
