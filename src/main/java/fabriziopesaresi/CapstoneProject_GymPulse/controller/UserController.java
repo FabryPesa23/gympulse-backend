@@ -4,10 +4,14 @@ import fabriziopesaresi.CapstoneProject_GymPulse.dto.request.UpdateUserRequest;
 import fabriziopesaresi.CapstoneProject_GymPulse.dto.response.UserResponse;
 import fabriziopesaresi.CapstoneProject_GymPulse.entity.User;
 import fabriziopesaresi.CapstoneProject_GymPulse.repository.UserRepository;
+import fabriziopesaresi.CapstoneProject_GymPulse.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/users")
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMe() {
@@ -32,6 +37,16 @@ public class UserController {
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
 
+        userRepository.save(user);
+        return ResponseEntity.ok(toResponse(user));
+    }
+
+    @PostMapping("/me/photo")
+    public ResponseEntity<UserResponse> uploadPhoto(
+            @RequestParam("file") MultipartFile file) throws IOException {
+        User user = getCurrentUser();
+        String imageUrl = cloudinaryService.uploadImage(file, "gympulse/profiles");
+        user.setProfileImageUrl(imageUrl);
         userRepository.save(user);
         return ResponseEntity.ok(toResponse(user));
     }
