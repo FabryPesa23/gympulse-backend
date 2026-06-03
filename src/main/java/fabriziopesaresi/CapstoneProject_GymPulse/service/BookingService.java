@@ -62,7 +62,6 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
 
-        // Invio email di conferma
         mailgunService.sendBookingConfirmation(
                 user.getEmail(),
                 user.getFirstName(),
@@ -101,7 +100,6 @@ public class BookingService {
             bookingRepository.save(newBooking);
             waitListRepository.delete(first);
 
-            // Invio email notifica waitlist
             mailgunService.sendWaitlistNotification(
                     first.getUser().getEmail(),
                     first.getUser().getFirstName(),
@@ -115,6 +113,23 @@ public class BookingService {
                 waitListRepository.save(w);
             });
         }
+    }
+
+    @Transactional
+    public void deleteBooking(Long bookingId) {
+        User user = getCurrentUser();
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Prenotazione non trovata"));
+
+        if (!booking.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Non puoi eliminare questa prenotazione");
+        }
+
+        if (booking.getStatus() != Booking.Status.CANCELLED) {
+            throw new RuntimeException("Puoi eliminare solo prenotazioni cancellate");
+        }
+
+        bookingRepository.delete(booking);
     }
 
     private User getCurrentUser() {
